@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  *  file           : ntp.h
- *  brief          : NTP / network time protocol tunctions
+ *  brief          : NTP / network time protocol functions
  ******************************************************************************
  */
 
@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-esp_err_t  NTP_Init(void);
+esp_err_t   NTP_Init(void);
 
 #ifdef __cplusplus
 }

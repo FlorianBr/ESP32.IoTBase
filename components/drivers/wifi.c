@@ -1,7 +1,7 @@
 /**
  ******************************************************************************
  *  file           : wifi.c
- *  brief          : WiFi Functions, based on espressifs WiFi station Example
+ *  brief          : WiFi Functions, based on espressifs WiFi station example
  ******************************************************************************
  */
 
@@ -10,19 +10,19 @@
 #include <string.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
-#include "esp_system.h"
 #include "freertos/event_groups.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 
 /****************************** Configuration */
-#define WIFI_CONNECTED_BIT BIT0         // Event: Connected
-#define WIFI_FAIL_BIT BIT1              // Event: Fail
-#define WIFI_MAXIMUM_RETRY 10           // Max number of retries
-#define MAX_SSIDLEN 128                 // Max length of the SSID String
-#define MAX_PASSLEN 128                 // Max length of the Password String
-#define NVS_NAMESPACE "SETTINGS"        // Namespace for the Settings
+#define WIFI_CONNECTED_BIT BIT0                 // Event: Connected
+#define WIFI_FAIL_BIT BIT1                      // Event: Fail
+#define WIFI_MAXIMUM_RETRY 10                   // Max number of retries
+#define MAX_SSIDLEN 128                         // Max length of the SSID String
+#define MAX_PASSLEN 128                         // Max length of the Password String
+#define NVS_NAMESPACE "SETTINGS"                // Namespace for the Settings
 
 /****************************** Statics */
 static const char *TAG = "WIFI";

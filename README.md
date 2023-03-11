@@ -14,6 +14,7 @@ Hardware: ESP32-WROOM-DA with 4MB
 - System info on startup
 - Wifi with settings from flash
 - Time sync from NTP server
+- MQTT
 
 # Notes
 
@@ -22,12 +23,11 @@ Hardware: ESP32-WROOM-DA with 4MB
 
 # TODOs
 
-- MQTT
-- MQTT Tick
+- MQTT: Subscribe topics and enque data
 - JSON Rx/Tx
 - Auto Update
 - Remote FW update mit fallback
-- Handling of WiFi disconnects
+- Handling of WiFi disconnects and mqtt reconnect
 - Error handling, not simple ESP_ERROR_CHECKs
 - Wrapper for accessing NVS
 - Namespacing of NVS Keys
