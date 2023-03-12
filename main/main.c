@@ -153,6 +153,9 @@ void app_main(void) {
     // Task for sending system status
     xTaskCreate(TaskSysStats, "MQTT Sys Stats", 4096, NULL, tskIDLE_PRIORITY, NULL);
 
+    // Setup MQTT
+    MQTT_Subscribe("cmd");
+
     // Idle loop
     ESP_LOGI(TAG, "Starting idling");
     while (1) {

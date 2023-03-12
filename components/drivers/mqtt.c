@@ -15,20 +15,24 @@
 #include "nvs_flash.h"
 #include "esp_mac.h"
 
+#include "mqtt.h"
+
 /****************************** Configuration */
 #define MAX_URLLEN  64                  // Max length of broker URL
-#define MAX_BASE_LENGTH 128             // Max length base topic
-#define MAX_TOPIC_LEN 250               // Max length of full topic
 #define NVS_NAMESPACE "SETTINGS"        // Namespace for the Settings
 #define MQTT_ID "IoT"                   // Start of the base ID
+#define MAX_RXMSG 10                    // Number of received messages
 
 /****************************** Statics */
 static const char *TAG = "MQTT";
 static esp_mqtt_client_handle_t client = NULL;
 static bool isConnected = false;
 static char BaseTopic[MAX_BASE_LENGTH];
+static QueueHandle_t xRxQueue = NULL;
 
 /****************************** Functions */
+
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 /**
  * @brief Event handler registered to receive MQTT events
@@ -46,9 +50,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-            // TODO subscribe to topic
-            // msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-            // ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
             isConnected = true;
             break;
         case MQTT_EVENT_DISCONNECTED:
@@ -67,10 +68,37 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_DATA:
+            MQTT_RXMessage RxMsg;
+            char cBuffer[MAX_TOPIC_LEN];
+
             ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-            // TODO put data into queue
-            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-            printf("DATA=%.*s\r\n", event->data_len, event->data);
+
+            // Queue full? Remove element
+            if (uxQueueSpacesAvailable(xRxQueue) == 0) {
+                ESP_LOGW(TAG, "RX queue full, removing element!");
+                xQueueReceive(xRxQueue, &RxMsg, 0);
+            }
+
+            const size_t BaseTopic_len = strlen(BaseTopic);
+
+            if ((BaseTopic_len > 0) && (BaseTopic_len < event->topic_len)) {
+                // Copy everything after basetopic/
+                memset(&cBuffer[0], 0x00, MAX_TOPIC_LEN);
+                memcpy(&cBuffer[0], event->topic+BaseTopic_len+1, event->topic_len-BaseTopic_len-1 );
+
+                // Copy into struct
+                memset(&RxMsg, 0x00, sizeof(RxMsg));
+                memcpy(&RxMsg.SubTopic[0], &cBuffer[0], MIN((MAX_TOPIC_LEN-MAX_BASE_LENGTH),strlen(cBuffer)));
+                memcpy(&RxMsg.Payload, event->data, MIN(event->data_len,(MAX_PAYLOAD)));
+
+                ESP_LOGI(TAG, "Enqueueing Rx message: Topic='%s' with %d bytes data", RxMsg.SubTopic, strlen(RxMsg.Payload));
+
+                if (!xQueueSend(xRxQueue, &RxMsg, 0)) {
+                    ESP_LOGW(TAG, "Failed to enqueue Rx message!");
+                }
+            } else {
+                ESP_LOGE(TAG, "Cannot extract subtopic from '%.*s', BL=%d!", event->topic_len, event->topic, BaseTopic_len);
+            }
             break;
         case MQTT_EVENT_BEFORE_CONNECT:
             ESP_LOGI(TAG, "MQTT_EVENT_BEFORE_CONNECT");
@@ -116,6 +144,12 @@ esp_err_t MQTT_Init(void) {
     ESP_ERROR_CHECK(esp_efuse_mac_get_default(&Mac[0]));
     snprintf(&BaseTopic[0], MAX_BASE_LENGTH, "%s_%02x%02x%02x%02x%02x%02x", MQTT_ID, Mac[0], Mac[1], Mac[2], Mac[3], Mac[4], Mac[5]);
 
+    // Create queue for received data
+    xRxQueue = xQueueCreate(MAX_RXMSG, sizeof(MQTT_RXMessage));
+    if (NULL == xRxQueue) {
+        ESP_LOGE(TAG, "Failed to create RX queue!");
+    }
+
     return (ESP_OK);
 }  // MQTT_Init
 
@@ -146,4 +180,56 @@ esp_err_t MQTT_Transmit(const char * SubTopic, const char * Payload) {
         return(ESP_FAIL);
     }
     return (ESP_OK);
+}
+
+/**
+ * @brief Subscribe to a subtopic
+ *
+ * @param SubTopic
+ * @return esp_err_t
+ */
+esp_err_t MQTT_Subscribe(const char * SubTopic) {
+    char FullTopic[MAX_TOPIC_LEN];
+
+    snprintf(&FullTopic[0], MAX_TOPIC_LEN, "%s/%s", BaseTopic, SubTopic);
+
+    int msg_id = esp_mqtt_client_subscribe(client, FullTopic, 0);
+
+    if (0 > msg_id) {
+        ESP_LOGW(TAG, "Cannot subscribe: Code %d", msg_id);
+        return(ESP_FAIL);
+    }
+    ESP_LOGI(TAG, "Subscribe successful, msg_id=%d", msg_id);
+    return (ESP_OK);
+}
+
+/**
+ * @brief Unsubscribe from a topic
+ *
+ * @param SubTopic
+ * @return esp_err_t
+ */
+esp_err_t MQTT_Unsubscribe(const char * SubTopic) {
+    char FullTopic[MAX_TOPIC_LEN];
+
+    snprintf(&FullTopic[0], MAX_TOPIC_LEN, "%s/%s", BaseTopic, SubTopic);
+
+    int msg_id = esp_mqtt_client_unsubscribe(client, FullTopic);
+
+    if (0 > msg_id) {
+        ESP_LOGW(TAG, "Cannot unsubscribe: Code %d", msg_id);
+        return(ESP_FAIL);
+    }
+    ESP_LOGI(TAG, "Unubscribe successful, msg_id=%d", msg_id);
+    return (ESP_OK);
+}
+
+
+/**
+ * @brief Get the handle to the RX queue
+ *
+ * @return QueueHandle_t*
+ */
+QueueHandle_t * MQTT_GetRxQueue() {
+    return(&xRxQueue);
 }

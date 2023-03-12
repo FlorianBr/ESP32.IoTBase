@@ -23,7 +23,6 @@ Hardware: ESP32-WROOM-DA with 4MB
 
 # TODOs
 
-- MQTT: Subscribe topics and enque data
 - JSON Rx/Tx
 - Auto Update
 - Remote FW update mit fallback
