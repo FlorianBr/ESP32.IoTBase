@@ -18,6 +18,7 @@
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_sntp.h"
+#include "esp_timer.h"
 
 #include "../components/drivers/wifi.h"
 #include "../components/drivers/ntp.h"
@@ -52,6 +53,7 @@ void TaskSysStats(void* pvParameters) {
         cJSON_AddNumberToObject(Payload, "unixtime", now);
         cJSON_AddStringToObject(Payload, "partition", part_info->label);        // Current partition
         cJSON_AddNumberToObject(Payload, "otastate", ota_state);                // OTA State
+        cJSON_AddNumberToObject(Payload, "uptime", esp_timer_get_time()/1000000); // Uptime in seconds
 
         // Free memory
         cJSON_AddNumberToObject(Payload, "heap8", heap_caps_get_free_size(MALLOC_CAP_8BIT));

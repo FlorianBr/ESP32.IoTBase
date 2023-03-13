@@ -23,9 +23,9 @@ Hardware: ESP32-WROOM-DA with 4MB
 
 # TODOs
 
-- JSON Rx/Tx
-- Auto Update
-- Remote FW update mit fallback
+- Basic Command interpreter
+- Command for FW Update
+- FW update mit rollback on errors
 - Handling of WiFi disconnects and mqtt reconnect
 - Error handling, not simple ESP_ERROR_CHECKs
 - Wrapper for accessing NVS
