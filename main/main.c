@@ -24,6 +24,8 @@
 #include "../components/drivers/ntp.h"
 #include "../components/drivers/mqtt.h"
 
+#include "../components/apps/commands.h"
+
 /****************************** Statics */
 
 static const char *TAG = "MAIN";
@@ -155,8 +157,19 @@ void app_main(void) {
     // Task for sending system status
     xTaskCreate(TaskSysStats, "MQTT Sys Stats", 4096, NULL, tskIDLE_PRIORITY, NULL);
 
-    // Setup MQTT
-    MQTT_Subscribe("cmd");
+    // Setup command interpreter
+    ESP_ERROR_CHECK(Comm_Init());
+
+    // 5 sec delay, then mark fw as valid to avoid rollback
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t ota_state;
+    if (esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+        if (ota_state == ESP_OTA_IMG_PENDING_VERIFY) {
+            ESP_LOGI(TAG, "Current partition marked as valid!");
+            esp_ota_mark_app_valid_cancel_rollback();
+        }
+    }
 
     // Idle loop
     ESP_LOGI(TAG, "Starting idling");

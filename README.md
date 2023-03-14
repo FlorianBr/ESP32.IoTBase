@@ -15,21 +15,23 @@ Hardware: ESP32-WROOM-DA with 4MB
 - Wifi with settings from flash
 - Time sync from NTP server
 - MQTT
+- Simple command receiver for MQTT commands
+- OTA firmware update with rollback
 
 # Notes
 
 - PSRAM is enabled, but ignored if not found
 - The system stops at a panic and is not rebooting!
+- For HTTPS Requests: Server cert verification is DISABLED! :warning:
+- FW version check on OTA update is disabled
 
 # TODOs
 
-- Basic Command interpreter
-- Command for FW Update
-- FW update mit rollback on errors
 - Handling of WiFi disconnects and mqtt reconnect
 - Error handling, not simple ESP_ERROR_CHECKs
 - Wrapper for accessing NVS
 - Namespacing of NVS Keys
+- Handling ot multiple mqtt subscribes
 
 # WONT DO
 
